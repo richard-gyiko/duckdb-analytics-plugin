@@ -26,6 +26,7 @@ import sys
 import os
 import re
 import duckdb
+import polars as pl
 
 DEFAULT_MAX_ROWS = 200
 DEFAULT_MAX_BYTES = 200_000
@@ -223,59 +224,55 @@ def main() -> None:
             # Wrap regular queries for limit control
             wrapped_query = f"SELECT * FROM ({query}) AS q LIMIT {max_rows + 1}"
             res = con.execute(wrapped_query)
-        cols = [d[0] for d in res.description]
-        types = [str(d[1]) for d in res.description]
-        rows = res.fetchall()
-
+        
+        # Convert to Polars DataFrame using .pl() for efficient formatting
+        df = res.pl()
+        
         truncated = False
-        if len(rows) > max_rows:
-            rows = rows[:max_rows]
+        if len(df) > max_rows:
+            df = df.head(max_rows)
             truncated = True
 
         # Format output based on requested format
         if output_format == "markdown":
-            # Default: LLM-friendly markdown table
-            def format_cell(val):
-                s = str(val) if val is not None else ""
-                return s.replace("|", "\\|").replace("\n", " ")
-            
-            header = "| " + " | ".join(format_cell(c) for c in cols) + " |"
-            separator = "|" + "|".join("---" for _ in cols) + "|"
-            data_rows = ["| " + " | ".join(format_cell(v) for v in row) + " |" for row in rows]
-            table = "\n".join([header, separator] + data_rows)
+            # Use Polars Config for clean markdown table output
+            with pl.Config(
+                tbl_formatting="MARKDOWN",
+                tbl_hide_dataframe_shape=True,
+                tbl_hide_column_data_types=True,
+                set_tbl_width_chars=1000,
+                tbl_rows=max_rows,
+            ):
+                table = str(df)
             
             result_parts = [table]
             if truncated:
-                result_parts.append(f"\n*Results truncated to {len(rows)} rows*")
+                result_parts.append(f"\n*Results truncated to {len(df)} rows*")
             
             print("\n".join(result_parts))
             return
         elif output_format == "records":
             # Return as list of dicts (JSON records)
             out_obj = {
-                "data": [dict(zip(cols, row)) for row in rows],
+                "data": df.to_dicts(),
                 "truncated": truncated,
                 "warnings": [],
                 "error": None,
             }
         elif output_format == "csv":
             # Return as CSV string
-            import io
-            import csv as csv_module
-            output = io.StringIO()
-            writer = csv_module.writer(output)
-            writer.writerow(cols)
-            writer.writerows(rows)
             out_obj = {
-                "csv": output.getvalue(),
+                "csv": df.write_csv(),
                 "truncated": truncated,
                 "warnings": [],
                 "error": None,
             }
         else:
             # json format with schema + rows
+            schema = [{"name": col, "type": str(dtype)} for col, dtype in zip(df.columns, df.dtypes)]
+            rows = df.rows()
             out_obj = {
-                "schema": [{"name": c, "type": t} for c, t in zip(cols, types)],
+                "schema": schema,
                 "rows": rows,
                 "truncated": truncated,
                 "warnings": [],
@@ -285,13 +282,17 @@ def main() -> None:
         encoded = json.dumps(out_obj, default=str)
         if len(encoded.encode("utf-8")) > max_bytes:
             # Progressively trim rows to fit size limit
-            while rows and len(json.dumps(
-                {**out_obj, "rows": rows}, default=str
-            ).encode("utf-8")) > max_bytes:
-                rows = rows[:-max(1, len(rows) // 4)]
+            while len(df) > 0 and len(encoded.encode("utf-8")) > max_bytes:
+                df = df.head(max(1, len(df) * 3 // 4))
                 truncated = True
-            out_obj["rows"] = rows
-            out_obj["truncated"] = truncated
+                if output_format == "records":
+                    out_obj["data"] = df.to_dicts()
+                elif output_format == "csv":
+                    out_obj["csv"] = df.write_csv()
+                else:
+                    out_obj["rows"] = df.rows()
+                out_obj["truncated"] = truncated
+                encoded = json.dumps(out_obj, default=str)
             out_obj["warnings"].append(
                 "Output truncated to respect max_bytes; try more aggregation or filters."
             )
