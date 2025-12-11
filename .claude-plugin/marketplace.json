@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "duckdb-analytics",
-      "source": ".",
+      "source": "./",
       "description": "Run DuckDB SQL queries over CSV, Parquet, JSON, Excel, and database sources for data exploration and analytics",
       "version": "1.0.0",
       "keywords": ["duckdb", "sql", "analytics", "data"],
