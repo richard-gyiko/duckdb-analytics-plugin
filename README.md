@@ -1,0 +1,1 @@
+# duckdb-analytics-plugin
