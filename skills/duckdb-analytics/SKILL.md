@@ -15,13 +15,25 @@ Run analytical SQL queries over tabular data using DuckDB.
 
 ## Usage
 
-**IMPORTANT**: On Windows, always change to the skill directory first to avoid path escaping issues:
+**IMPORTANT - Windows Shell Escaping:**
+
+1. Always `cd` to the skill directory first
+2. Use **double quotes** for the echo command with escaped inner quotes (`\"`)
+3. Use **forward slashes** in file paths (DuckDB accepts them on Windows)
 
 ```bash
-cd "<skill_directory>" && echo '<json_request>' | uv run scripts/query_duckdb.py
+cd "<skill_directory>" && echo "{\"query\": \"SELECT * FROM 'D:/path/to/file.csv'\"}" | uv run scripts/query_duckdb.py
 ```
 
-Where `<skill_directory>` is the directory containing `scripts/query_duckdb.py`.
+**WRONG** (causes Invalid JSON escape errors):
+```bash
+echo '{"query": "SELECT * FROM 'D:\path\file.csv'"}' | ...
+```
+
+**CORRECT**:
+```bash
+echo "{\"query\": \"SELECT * FROM 'D:/path/file.csv'\"}" | ...
+```
 
 ## Query Modes
 
