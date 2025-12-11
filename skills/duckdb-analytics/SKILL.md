@@ -15,11 +15,13 @@ Run analytical SQL queries over tabular data using DuckDB.
 
 ## Usage
 
-Execute `scripts/query_duckdb.py` with JSON input on stdin:
+**IMPORTANT**: On Windows, always change to the skill directory first to avoid path escaping issues:
 
 ```bash
-echo '<json_request>' | uv run scripts/query_duckdb.py
+cd "<skill_directory>" && echo '<json_request>' | uv run scripts/query_duckdb.py
 ```
+
+Where `<skill_directory>` is the directory containing `scripts/query_duckdb.py`.
 
 ## Query Modes
 
