@@ -59,7 +59,6 @@ Define sources to create named views for cleaner SQL:
   "options": {
     "max_rows": 200,
     "max_bytes": 200000,
-    "timeout": 30,
     "format": "json"
   }
 }
@@ -68,7 +67,6 @@ Define sources to create named views for cleaner SQL:
 **Options:**
 - `max_rows`: Maximum rows to return (default: 200)
 - `max_bytes`: Maximum response size in bytes (default: 200000)
-- `timeout`: Query timeout in seconds (default: 30)
 - `format`: Output format - `json` (schema+rows), `records` (list of dicts), or `csv`
 
 **Response (json format - default):**

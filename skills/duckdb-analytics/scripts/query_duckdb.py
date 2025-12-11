@@ -29,7 +29,6 @@ import duckdb
 
 DEFAULT_MAX_ROWS = 200
 DEFAULT_MAX_BYTES = 200_000
-DEFAULT_TIMEOUT_SECONDS = 30
 
 # Patterns for utility statements that cannot be wrapped in SELECT * FROM (...)
 UTILITY_PATTERNS = [
@@ -203,14 +202,12 @@ def main() -> None:
     options = req.get("options", {})
     max_rows = int(options.get("max_rows", DEFAULT_MAX_ROWS))
     max_bytes = int(options.get("max_bytes", DEFAULT_MAX_BYTES))
-    timeout = int(options.get("timeout", DEFAULT_TIMEOUT_SECONDS))
     output_format = options.get("format", "json")  # json, records, csv
 
     try:
         con = duckdb.connect(database=":memory:")
         con.execute("PRAGMA memory_limit='1GB';")
         con.execute("PRAGMA threads=4;")
-        con.execute(f"SET statement_timeout='{timeout}s';")
 
         # Register aliased sources as views
         for src in sources:
