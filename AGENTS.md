@@ -1,0 +1,1 @@
+While working on a skill or planning a new spec to extend or modify the skill, make sure to follow the skill best practices [here](docs/claude_skills_best_practices.md)
