@@ -1,7 +1,7 @@
 {
   "name": "data-wrangler",
   "description": "Transform and export data using DuckDB SQL. Read CSV/Parquet/JSON/Excel/databases, apply SQL transformations (joins, aggregations, PIVOT/UNPIVOT, sampling), and write results to Parquet/CSV/JSON files.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Richard Gyiko"
   },
