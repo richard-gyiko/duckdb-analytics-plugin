@@ -1,6 +1,6 @@
-# DuckDB Analytics Plugin for Claude Code
+# Data Wrangler Plugin for Claude Code
 
-A Claude Code plugin that enables powerful SQL analytics over tabular data using DuckDB.
+A Claude Code plugin that enables powerful data transformation and export using DuckDB SQL.
 
 ## Features
 
@@ -8,7 +8,9 @@ A Claude Code plugin that enables powerful SQL analytics over tabular data using
 - **Database connections**: Postgres, MySQL, SQLite, S3
 - **Direct file queries**: Query files directly by path
 - **Aliased sources**: Join multiple datasets with clean SQL
-- **Smart truncation**: Handles large datasets with automatic result limiting
+- **Write mode**: Export results to Parquet, CSV, or JSON
+- **Partitioning**: Create Hive-style partitioned datasets
+- **Advanced SQL**: PIVOT/UNPIVOT, sampling, window functions
 
 ## Installation
 
@@ -17,20 +19,20 @@ A Claude Code plugin that enables powerful SQL analytics over tabular data using
 Add the marketplace and install:
 
 ```
-/plugin marketplace add richard-gyiko/duckdb-analytics-plugin
-/plugin install duckdb-analytics@duckdb-analytics-marketplace
+/plugin marketplace add richard-gyiko/data-wrangler-plugin
+/plugin install data-wrangler@data-wrangler-marketplace
 ```
 
 ### Local Development
 
 ```
-/plugin marketplace add ./path/to/duckdb-analytics-plugin
-/plugin install duckdb-analytics@duckdb-analytics-marketplace
+/plugin marketplace add ./path/to/data-wrangler-plugin
+/plugin install data-wrangler@data-wrangler-marketplace
 ```
 
 ## Usage
 
-Once installed, Claude will automatically use this skill when you ask data analysis questions.
+Once installed, Claude will automatically use this skill when you ask data transformation questions.
 
 ### Examples
 
@@ -40,8 +42,11 @@ Once installed, Claude will automatically use this skill when you ask data analy
 **Join multiple files:**
 > "Join orders.parquet with customers.csv and show total orders per customer"
 
-**Database query:**
-> "Query the events table from our Postgres database and show events from the last 7 days"
+**Export to Parquet:**
+> "Filter active users from users.csv and save as users_active.parquet"
+
+**Create partitioned dataset:**
+> "Convert events.json to Parquet partitioned by year and month"
 
 ## How It Works
 
@@ -63,15 +68,18 @@ Dependencies are automatically installed via the inline script metadata:
 ## File Structure
 
 ```
-duckdb-analytics-plugin/
+data-wrangler-plugin/
 ├── .claude-plugin/
 │   ├── plugin.json          # Plugin manifest
 │   └── marketplace.json     # Marketplace definition
 ├── skills/
-│   └── duckdb-analytics/
+│   └── data-wrangler/
 │       ├── SKILL.md         # Skill instructions for Claude
+│       ├── SECRETS.md       # Secrets management docs
+│       ├── TRANSFORMS.md    # Advanced SQL patterns
 │       └── scripts/
 │           └── query_duckdb.py  # DuckDB query engine
+├── tests/                   # Test suite
 └── README.md
 ```
 
