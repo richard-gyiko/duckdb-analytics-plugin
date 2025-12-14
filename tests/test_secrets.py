@@ -17,7 +17,7 @@ from pathlib import Path
 
 # Import from the main script
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "duckdb-analytics" / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "data-wrangler" / "scripts"))
 
 from query_duckdb import (
     # Pydantic Models (only what we need for SQL generation tests)

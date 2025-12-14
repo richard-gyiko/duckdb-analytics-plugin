@@ -182,6 +182,45 @@ class HuggingFaceSecret(SecretBase):
     provider: Optional[str] = None
 
 
+# =============================================================================
+# Output Configuration Models (for write capability)
+# =============================================================================
+
+
+class OutputOptions(BaseModel):
+    """Options for file output via COPY TO."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    # Compression (Parquet, CSV)
+    compression: Optional[Literal["zstd", "snappy", "gzip", "lz4", "uncompressed"]] = (
+        None
+    )
+    # Partitioning (all formats)
+    partition_by: Optional[list[str]] = None
+    # Parquet-specific
+    row_group_size: Optional[int] = None
+    # Overwrite control
+    overwrite: bool = False
+    # CSV-specific
+    header: bool = True
+    delimiter: str = ","
+    # JSON-specific: true=JSON array, false=newline-delimited JSON
+    array: bool = True
+
+
+class OutputConfig(BaseModel):
+    """Configuration for writing query results to a file."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(description="Output file or directory path")
+    format: Literal["parquet", "csv", "json"] = Field(
+        description="Output format: parquet, csv, or json"
+    )
+    options: OutputOptions = Field(default_factory=OutputOptions)
+
+
 # Union type for all secret types
 AnySecret = Union[
     PostgresSecret,
@@ -465,6 +504,109 @@ def register_all_secrets(
 
 
 # =============================================================================
+# Write Output Function
+# =============================================================================
+
+
+def write_output(
+    con: duckdb.DuckDBPyConnection, query: str, output: OutputConfig
+) -> dict:
+    """
+    Execute query and write results to file using COPY TO.
+
+    Returns metadata about the write operation including path, size, and duration.
+    """
+    import time
+
+    start_time = time.time()
+    opts = output.options
+    format_str = output.format.upper()
+
+    # Check for overwrite protection (for non-partitioned writes)
+    path = Path(output.path)
+    if not opts.overwrite and not opts.partition_by:
+        if path.exists():
+            raise FileExistsError(
+                f"Output path already exists: {output.path}. "
+                "Set options.overwrite=true to overwrite."
+            )
+
+    # Build COPY TO options list
+    copy_opts = [f"FORMAT {format_str}"]
+
+    # Format-specific options
+    if output.format == "parquet":
+        if opts.compression and opts.compression != "uncompressed":
+            copy_opts.append(f"COMPRESSION {opts.compression.upper()}")
+        if opts.row_group_size:
+            copy_opts.append(f"ROW_GROUP_SIZE {opts.row_group_size}")
+    elif output.format == "csv":
+        if opts.header:
+            copy_opts.append("HEADER true")
+        else:
+            copy_opts.append("HEADER false")
+        if opts.delimiter != ",":
+            copy_opts.append(f"DELIMITER {escape_string(opts.delimiter)}")
+        if opts.compression and opts.compression != "uncompressed":
+            copy_opts.append(f"COMPRESSION {opts.compression.upper()}")
+    elif output.format == "json":
+        # DuckDB defaults to NDJSON; must explicitly set ARRAY true for JSON array
+        if opts.array:
+            copy_opts.append("ARRAY true")
+        else:
+            copy_opts.append("ARRAY false")
+
+    # Partitioning (works for all formats)
+    if opts.partition_by:
+        cols = ", ".join(opts.partition_by)
+        copy_opts.append(f"PARTITION_BY ({cols})")
+
+    # Overwrite handling
+    if opts.overwrite:
+        copy_opts.append("OVERWRITE_OR_IGNORE true")
+
+    # Build and execute COPY TO
+    opts_str = ", ".join(copy_opts)
+    escaped_path = escape_string(output.path)
+    copy_sql = f"COPY ({query}) TO {escaped_path} ({opts_str})"
+
+    con.execute(copy_sql)
+
+    duration_ms = int((time.time() - start_time) * 1000)
+
+    # Gather metadata
+    result: dict = {
+        "success": True,
+        "output_path": output.path,
+        "format": output.format,
+        "duration_ms": duration_ms,
+        "warnings": [],
+        "error": None,
+    }
+
+    # Try to get file size and partition info
+    path = Path(output.path)
+    if path.is_file():
+        result["file_size_bytes"] = path.stat().st_size
+    elif path.is_dir():
+        # Partitioned output - list partitions
+        ext = output.format if output.format != "json" else "json"
+        files = list(path.rglob(f"*.{ext}"))
+        result["file_count"] = len(files)
+        result["total_size_bytes"] = sum(f.stat().st_size for f in files)
+        # Extract partition paths
+        partitions = set()
+        for f in files:
+            rel = f.relative_to(path)
+            if len(rel.parts) > 1:
+                partitions.add("/".join(rel.parts[:-1]))
+        if partitions:
+            result["partitions"] = sorted(partitions)
+
+    return result
+
+
+# =============================================================================
 # Utility Functions
 # =============================================================================
 
@@ -655,6 +797,7 @@ def main() -> None:
     sources = req.get("sources", [])
     options = req.get("options", {})
     secrets_file = req.get("secrets_file")
+    output_config_raw = req.get("output")  # NEW: Write mode configuration
     max_rows = int(options.get("max_rows", DEFAULT_MAX_ROWS))
     max_bytes = int(options.get("max_bytes", DEFAULT_MAX_BYTES))
     output_format = options.get("format", "markdown")  # markdown, json, records, csv
@@ -704,6 +847,30 @@ def main() -> None:
         for src in sources:
             load_source(con, src, secrets_dict)
 
+        # === WRITE MODE ===
+        # If output config is provided, write results to file and return metadata
+        if output_config_raw:
+            try:
+                output_cfg = OutputConfig(**output_config_raw)
+            except Exception as e:
+                print(json.dumps({"error": f"Invalid output configuration: {e}"}))
+                return
+            
+            try:
+                result = write_output(con, query, output_cfg)
+                print(json.dumps(result, default=str))
+            except Exception as e:
+                error_msg = str(e)
+                # Check for overwrite error
+                if "already exists" in error_msg.lower():
+                    error_msg = (
+                        f"Output path already exists: {output_cfg.path}. "
+                        "Set options.overwrite=true to overwrite."
+                    )
+                print(json.dumps({"success": False, "error": error_msg}))
+            return
+
+        # === QUERY MODE ===
         # Detect utility statements (DESCRIBE, SUMMARIZE, etc.) that can't be wrapped
         is_utility = is_utility_statement(query)
         

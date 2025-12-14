@@ -1,6 +1,6 @@
 {
-  "name": "duckdb-analytics",
-  "description": "Run DuckDB SQL queries over CSV, Parquet, JSON, Excel, and database sources for data exploration and analytics",
+  "name": "data-wrangler",
+  "description": "Transform and export data using DuckDB SQL. Read CSV/Parquet/JSON/Excel/databases, apply SQL transformations (joins, aggregations, PIVOT/UNPIVOT, sampling), and write results to Parquet/CSV/JSON files.",
   "version": "1.0.0",
   "author": {
     "name": "Richard Gyiko"
@@ -11,10 +11,14 @@
   "keywords": [
     "duckdb",
     "sql",
-    "analytics",
+    "data-wrangling",
+    "etl",
     "csv",
     "parquet",
-    "data-analysis",
-    "excel"
+    "json",
+    "transform",
+    "export",
+    "pivot",
+    "sampling"
   ]
 }

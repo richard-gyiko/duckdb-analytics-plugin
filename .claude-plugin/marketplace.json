@@ -1,19 +1,19 @@
 {
-  "name": "duckdb-analytics-marketplace",
+  "name": "data-wrangler-marketplace",
   "owner": {
     "name": "Richard Gyiko"
   },
   "metadata": {
-    "description": "DuckDB Analytics plugin for Claude Code - SQL queries over tabular data",
+    "description": "Data Wrangler plugin for Claude Code - Transform and export data using DuckDB SQL",
     "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "duckdb-analytics",
+      "name": "data-wrangler",
       "source": "./",
-      "description": "Run DuckDB SQL queries over CSV, Parquet, JSON, Excel, and database sources for data exploration and analytics",
-      "version": "1.0.0",
-      "keywords": ["duckdb", "sql", "analytics", "data"],
+      "description": "Transform and export data using DuckDB SQL. Read CSV/Parquet/JSON/Excel/databases, apply SQL transformations, and write results to files.",
+      "version": "2.0.0",
+      "keywords": ["duckdb", "sql", "data-wrangling", "etl", "parquet", "csv", "transform", "export"],
       "category": "data-analysis"
     }
   ]
