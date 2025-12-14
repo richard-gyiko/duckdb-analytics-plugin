@@ -4,7 +4,6 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
 
 SCRIPT_PATH = Path(__file__).parent.parent / "skills" / "data-wrangler" / "scripts" / "query_duckdb.py"
 
