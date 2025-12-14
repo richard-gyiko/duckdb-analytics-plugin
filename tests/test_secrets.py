@@ -22,12 +22,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "skills" / "data-wrangler"
 from query_duckdb import (
     # Pydantic Models (only what we need for SQL generation tests)
     PostgresSecret,
-    MySQLSecret,
     S3Secret,
     AzureSecret,
     HTTPSecret,
     HuggingFaceSecret,
-    SecretsConfig,
     # Functions - these are what we're actually testing
     expand_env_vars,
     load_secrets_from_yaml,
