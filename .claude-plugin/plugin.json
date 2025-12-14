@@ -5,8 +5,8 @@
   "author": {
     "name": "Richard Gyiko"
   },
-  "homepage": "https://github.com/richard-gyiko/duckdb-analytics-plugin",
-  "repository": "https://github.com/richard-gyiko/duckdb-analytics-plugin",
+  "homepage": "https://github.com/richard-gyiko/data-wrangler-plugin",
+  "repository": "https://github.com/richard-gyiko/data-wrangler-plugin",
   "license": "MIT",
   "keywords": [
     "duckdb",
